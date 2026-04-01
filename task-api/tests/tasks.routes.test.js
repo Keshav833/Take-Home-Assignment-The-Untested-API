@@ -102,6 +102,7 @@ describe('tasks routes', () => {
           status: 'todo',
           priority: 'medium',
           dueDate: null,
+          assignee: null,
           completedAt: null,
           createdAt: expect.any(String),
         })
@@ -272,6 +273,78 @@ describe('tasks routes', () => {
 
       expect(response.status).toBe(404);
       expect(response.body).toEqual({ error: 'Task not found' });
+    });
+  });
+
+  describe('PATCH /tasks/:id/assign', () => {
+    it('assigns an existing task and returns the updated task', async () => {
+      const task = taskService.create({ title: 'Assign me' });
+
+      const response = await request(app)
+        .patch(`/tasks/${task.id}/assign`)
+        .send({ assignee: 'Alice' });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(
+        expect.objectContaining({
+          id: task.id,
+          title: 'Assign me',
+          assignee: 'Alice',
+        })
+      );
+    });
+
+    it('rejects an empty assignee', async () => {
+      const task = taskService.create({ title: 'Assign me' });
+
+      const response = await request(app)
+        .patch(`/tasks/${task.id}/assign`)
+        .send({ assignee: '   ' });
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({
+        error: 'assignee is required and must be a non-empty string',
+      });
+    });
+
+    it('rejects a missing assignee field', async () => {
+      const task = taskService.create({ title: 'Assign me' });
+
+      const response = await request(app)
+        .patch(`/tasks/${task.id}/assign`)
+        .send({});
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({
+        error: 'assignee is required and must be a non-empty string',
+      });
+    });
+
+    it('returns 404 for a missing task', async () => {
+      const response = await request(app)
+        .patch('/tasks/missing-id/assign')
+        .send({ assignee: 'Alice' });
+
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({ error: 'Task not found' });
+    });
+
+    it('reassigns an already assigned task', async () => {
+      const task = taskService.create({ title: 'Assign me' });
+      taskService.assignTask(task.id, 'Alice');
+
+      const response = await request(app)
+        .patch(`/tasks/${task.id}/assign`)
+        .send({ assignee: 'Bob' });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(
+        expect.objectContaining({
+          id: task.id,
+          assignee: 'Bob',
+        })
+      );
+      expect(taskService.findById(task.id).assignee).toBe('Bob');
     });
   });
 });

@@ -17,6 +17,7 @@ describe('taskService', () => {
           status: 'todo',
           priority: 'medium',
           dueDate: null,
+          assignee: null,
           completedAt: null,
           createdAt: expect.any(String),
         })
@@ -188,6 +189,34 @@ describe('taskService', () => {
 
     it('returns null when completing a missing task', () => {
       expect(taskService.completeTask('missing-id')).toBeNull();
+    });
+  });
+
+  describe('assignTask', () => {
+    it('assigns a task to a user', () => {
+      const task = taskService.create({ title: 'Assign me' });
+
+      const updated = taskService.assignTask(task.id, 'Alice');
+
+      expect(updated).toEqual(
+        expect.objectContaining({
+          id: task.id,
+          assignee: 'Alice',
+        })
+      );
+      expect(taskService.findById(task.id)).toEqual(updated);
+    });
+
+    it('trims surrounding whitespace from the assignee name', () => {
+      const task = taskService.create({ title: 'Trim assignee' });
+
+      const updated = taskService.assignTask(task.id, '  Alice  ');
+
+      expect(updated.assignee).toBe('Alice');
+    });
+
+    it('returns null when assigning a missing task', () => {
+      expect(taskService.assignTask('missing-id', 'Alice')).toBeNull();
     });
   });
 
